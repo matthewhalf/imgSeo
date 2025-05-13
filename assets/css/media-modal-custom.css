@@ -1,0 +1,115 @@
+/**
+ * CSS personalizzato per i bottoni di generazione testo alternativo
+ * Ottimizzato per la compatibilità con diversi temi e versioni di WordPress
+ */
+
+/* Stile principale dei bottoni di generazione */
+.generate-alt-text-modal-btn,
+.generate-alt-text-edit-btn,
+button[id^="generate-alt-text-"] {
+    background-color: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+    font-weight: 500;
+}
+
+/* Stato hover */
+.generate-alt-text-modal-btn:hover,
+.generate-alt-text-edit-btn:hover,
+button[id^="generate-alt-text-"]:hover {
+    background-color: #135e96;
+    border-color: #135e96;
+}
+
+/* Stato focus */
+.generate-alt-text-modal-btn:focus,
+.generate-alt-text-edit-btn:focus,
+button[id^="generate-alt-text-"]:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 1px;
+    box-shadow: none;
+}
+
+/* Stato disabilitato */
+.generate-alt-text-modal-btn:disabled,
+.generate-alt-text-edit-btn:disabled,
+button[id^="generate-alt-text-"]:disabled {
+    background-color: #a7aaad !important; /* Important necessario per sovrascrivere lo stile nativo */
+    border-color: #a7aaad !important;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+/* Container del bottone */
+.imgseo-button-container {
+    margin: 8px 0;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+    clear: both;
+    display: block !important; /* Necessario per garantire visibilità */
+    width: 100%;
+}
+
+/* Stili per il container dei risultati */
+.alt-text-result {
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Messaggio di successo */
+.alt-text-result .success,
+.alt-text-result span[style*="color:green"] {
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    display: block;
+    padding: 6px 10px;
+    border-radius: 3px;
+}
+
+/* Messaggio di errore */
+.alt-text-result .error,
+.alt-text-result span[style*="color:red"] {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    display: block;
+    padding: 6px 10px;
+    border-radius: 3px;
+}
+
+/* Messaggio di elaborazione */
+.alt-text-result .processing,
+.alt-text-result span[style*="color:#666"] {
+    color: #666;
+    font-style: italic;
+}
+
+/* Stili specifici per la modale */
+.media-modal .attachment-details .setting,
+.media-sidebar .attachment-details .setting {
+    margin-bottom: 8px;
+}
+
+/* Stili specifici per la pagina di modifica */
+.imgseo-metabox-content {
+    padding: 0 5px;
+}
+
+.imgseo-metabox-content .description {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 10px;
+}

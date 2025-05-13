@@ -1,0 +1,488 @@
+/**
+ * Stili amministrativi per il plugin ImgSEO
+ */
+
+/* Stili generali per le schede delle impostazioni */
+.imgseo-tabs .nav-tab-wrapper {
+    margin-bottom: 20px;
+}
+
+.imgseo-tabs .tab-content {
+    display: none;
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.imgseo-tabs .tab-content.active {
+    display: block;
+}
+
+/* Stili per le impostazioni */
+.imgseo-api-key-container {
+    margin-bottom: 20px;
+}
+
+.api-key-input-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.api-key-input-group input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.api-key-input-group button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    height: 30px;
+}
+
+.api-key-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.api-key-status {
+    margin: 10px 0;
+}
+
+.status-message {
+    padding: 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.status-message .dashicons {
+    margin-right: 5px;
+}
+
+.status-message.success {
+    background-color: #ecf9ec;
+    color: #1e7a1e;
+    border: 1px solid #c3e6c3;
+}
+
+.status-message.error {
+    background-color: #fbeaea;
+    color: #b32d2e;
+    border: 1px solid #f5c2c2;
+}
+
+.status-message.warning {
+    background-color: #fff8e5;
+    color: #96600c;
+    border: 1px solid #ffe399;
+}
+
+.status-message.info {
+    background-color: #e5f5fa;
+    color: #007cba;
+    border: 1px solid #bee5f5;
+}
+
+/* Stili per i crediti */
+.imgseo-credits-container {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.credits-count {
+    font-size: 48px;
+    font-weight: bold;
+    color: #2271b1;
+    line-height: 1;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.credits-count.low-credits {
+    color: #b32d2e;
+}
+
+.credits-label {
+    font-size: 14px;
+    color: #646970;
+    margin-top: 5px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.credits-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.credits-warning, .credits-status {
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.credits-warning .dashicons, .credits-status .dashicons {
+    margin-right: 5px;
+}
+
+.credits-warning.warning {
+    background-color: #fff8e5;
+    color: #96600c;
+    border: 1px solid #ffe399;
+}
+
+.credits-warning.error {
+    background-color: #fbeaea;
+    color: #b32d2e;
+    border: 1px solid #f5c2c2;
+}
+
+.credits-status.success {
+    background-color: #ecf9ec;
+    color: #1e7a1e;
+    border: 1px solid #c3e6c3;
+}
+
+/* Stili per la pagina bulk */
+.bulk-options {
+    background-color: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.option-group {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.option-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.option-group h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.radio-option {
+    display: block;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #f0f0f1;
+    background-color: #f8f9fa;
+}
+
+.radio-option:hover {
+    background-color: #f0f0f1;
+}
+
+.option-title {
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* Stili per la visualizzazione dei job */
+.job-status-list {
+    margin-top: 30px;
+}
+
+.status-pending {
+    color: #9c7718;
+    background-color: #f0e1a1;
+    padding: 3px 6px;
+    border-radius: 3px;
+}
+
+.status-processing {
+    color: #0a4b78;
+    background-color: #c6e0f7;
+    padding: 3px 6px;
+    border-radius: 3px;
+}
+
+.status-completed {
+    color: #145523;
+    background-color: #cce5d8;
+    padding: 3px 6px;
+    border-radius: 3px;
+}
+
+.status-stopped {
+    color: #761919;
+    background-color: #f1c0c0;
+    padding: 3px 6px;
+    border-radius: 3px;
+}
+
+/* Stili per il progresso */
+#progress-container {
+    margin-top: 20px;
+    margin-bottom: 30px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+#progress-bar {
+    width: 100%;
+    background-color: #f0f0f1;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+#progress-bar-fill {
+    height: 24px;
+    background-color: #2271b1;
+    transition: width 0.3s ease;
+    width: 0;
+}
+
+/* Stili per i log in tempo reale */
+.log-container {
+    margin-top: 20px;
+    margin-bottom: 30px;
+    background-color: #1e1e1e;
+    border-radius: 5px;
+    padding: 10px;
+    color: #f1f1f1;
+}
+
+.log-container h3 {
+    margin-top: 0;
+    color: #f1f1f1;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #444;
+}
+
+.log-entries {
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.log-entry {
+    padding: 4px 6px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.log-entry:hover {
+    background-color: #2a2a2a;
+}
+
+.log-success {
+    color: #8bc34a;
+}
+
+.log-error {
+    color: #f44336;
+}
+
+.log-time {
+    flex: 0 0 80px;
+    color: #9e9e9e;
+}
+
+.log-filename {
+    flex: 0 0 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
+    color: #64b5f6;
+}
+
+.log-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Stili per i bottoni */
+.generate-alt-text-btn, .generate-alt-text-button, .metabox-generate-btn {
+    display: inline-block !important;
+    width: auto !important;
+    margin-right: 10px !important;
+}
+
+/* Stili per il metabox */
+.imgseo-alt-text-metabox {
+    margin-bottom: 15px;
+}
+
+.current-alt-text {
+    margin-bottom: 15px;
+}
+
+/* Stili per Image Renamer */
+.imgseo-renamer-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 15px 0;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.imgseo-renamer-intro {
+    margin-bottom: 25px;
+}
+
+.imgseo-renamer-intro h2 {
+    margin-top: 0;
+}
+
+.imgseo-renamer-search {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.imgseo-renamer-preview {
+    margin-top: 20px;
+}
+
+.imgseo-renamer-image-info {
+    display: flex;
+    gap: 30px;
+}
+
+.imgseo-renamer-image-preview {
+    flex: 0 0 250px;
+}
+
+.imgseo-renamer-image-preview img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 3px;
+    background: #f5f5f5;
+}
+
+.imgseo-renamer-image-details {
+    flex: 1;
+}
+
+.imgseo-renamer-new-name {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f1;
+}
+
+.imgseo-renamer-actions {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.imgseo-renamer-spinner {
+    float: none;
+    margin-top: 0;
+}
+
+.imgseo-renamer-result {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f1;
+}
+
+/* Stilizzazione log del renamer */
+.imgseo-renamer-logs {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 15px 0;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.imgseo-renamer-logs-header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.imgseo-renamer-logs-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.imgseo-renamer-logs-table {
+    margin-top: 15px;
+}
+
+.imgseo-renamer-logs-pagination {
+    margin-top: 15px;
+}
+
+.imgseo-logs-loading, 
+.imgseo-logs-error {
+    text-align: center;
+    padding: 20px;
+}
+
+.imgseo-logs-empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.imgseo-log-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.imgseo-log-status.success {
+    background-color: #ecf9ec;
+    color: #1e7a1e;
+    border: 1px solid #c3e6c3;
+}
+
+.imgseo-log-status.error {
+    background-color: #fbeaea;
+    color: #b32d2e;
+    border: 1px solid #f5c2c2;
+}
+
+.hidden {
+    display: none !important;
+}
