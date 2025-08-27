@@ -67,10 +67,31 @@ class ImgSEO_API {
             wp_send_json_error(['message' => __('Insufficient permissions', IMGSEO_TEXT_DOMAIN)]);
         }
         
+        // Security: Rate limiting - max 5 attempts per 10 minutes per user
+        $user_id = get_current_user_id();
+        $rate_key = 'imgseo_api_verify_attempts_' . $user_id;
+        $attempts = get_transient($rate_key) ?: 0;
+        
+        if ($attempts >= 5) {
+            wp_send_json_error(['message' => __('Too many verification attempts. Please wait 10 minutes.', IMGSEO_TEXT_DOMAIN)]);
+        }
+        
+        set_transient($rate_key, $attempts + 1, 600); // 10 minutes
+        
         $api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
         
         if (empty($api_key)) {
             wp_send_json_error(['message' => __('ImgSEO Token not provided', IMGSEO_TEXT_DOMAIN)]);
+        }
+        
+        // Security: Validate API key format (basic validation)
+        if (strlen($api_key) < 10 || strlen($api_key) > 100) {
+            wp_send_json_error(['message' => __('Invalid ImgSEO Token format', IMGSEO_TEXT_DOMAIN)]);
+        }
+        
+        // Security: Check for malicious patterns
+        if (preg_match('/[<>"\']/', $api_key)) {
+            wp_send_json_error(['message' => __('Invalid ImgSEO Token format', IMGSEO_TEXT_DOMAIN)]);
         }
         
         // Verify the API key - create a new instance with the specified API key
@@ -123,7 +144,8 @@ class ImgSEO_API {
             $response_code = wp_remote_retrieve_response_code($credits_check);
             $response_body = json_decode(wp_remote_retrieve_body($credits_check), true);
             
-            error_log('ImgSEO API: Credits response - ' . print_r($response_body, true));
+            // Log safe response info without sensitive data
+            error_log('ImgSEO API: Credits response received with code: ' . $response_code);
             
             if ($response_code === 200) {
                 if (isset($response_body['credits_remaining'])) {
@@ -371,6 +393,15 @@ class ImgSEO_API {
        error_log('ImgSEO API: Crediti disponibili prima dell\'operazione: ' . $credits);
        
        try {
+           // Check if we should always use the base64 method (bypass hotlinking protections and Cloudflare)
+           $always_use_base64 = get_option('imgseo_always_use_base64', 0);
+           
+           // If always_use_base64 is enabled, skip the URL method and go straight to base64
+           if ($always_use_base64) {
+               error_log('ImgSEO API: Using base64 method directly as per settings (imgseo_always_use_base64 enabled)');
+               return $this->generate_alt_text_with_base64($image_url, $prompt, $options);
+           }
+           
            // Check if the site is offline or online
            $is_offline = $this->is_site_offline();
            
@@ -437,6 +468,63 @@ class ImgSEO_API {
            // Check response code
            $response_code = wp_remote_retrieve_response_code($response);
            if ($response_code !== 200 && $response_code !== 201) {
+               // Ottieni il corpo della risposta per analizzarlo
+               $response_body_text = wp_remote_retrieve_body($response);
+               error_log('ImgSEO API: Risposta non-200 ricevuta. Codice: ' . $response_code . ', Corpo: ' . $response_body_text);
+               $response_body_json = json_decode($response_body_text, true);
+               
+               // Verifica se è un errore che può beneficiare del fallback con base64
+               $should_try_fallback = false;
+               
+               // Errore 403 (protezione hotlinking)
+               if ($response_code === 403) {
+                   error_log('ImgSEO API: Rilevata protezione hotlinking (403 Forbidden). Tentativo di fallback al metodo base64.');
+                   $should_try_fallback = true;
+               }
+               // Errore 5xx (problemi lato server)
+               elseif ($response_code >= 500) {
+                   error_log('ImgSEO API: Rilevato errore server ' . $response_code . '. Tentativo di fallback al metodo base64.');
+                   $should_try_fallback = true;
+               }
+               // Errore 400 che potrebbe contenere errori server (come 520 Cloudflare) nel corpo
+               elseif ($response_code === 400 && $response_body_json) {
+                   // Verifica per errore Cloudflare 520 o altri errori server nel corpo JSON
+                   if (
+                       (isset($response_body_json['status_code']) && ($response_body_json['status_code'] >= 500 || $response_body_json['status_code'] == 520)) ||
+                       (isset($response_body_json['error']) && strpos(strtolower($response_body_json['error']), 'server error') !== false)
+                   ) {
+                       $status_code = isset($response_body_json['status_code']) ? $response_body_json['status_code'] : 'sconosciuto';
+                       error_log('ImgSEO API: Rilevato errore server (codice ' . $status_code . ') all\'interno di risposta 400. Tentativo di fallback al metodo base64.');
+                       $should_try_fallback = true;
+                   }
+               }
+               // Altri errori server inclusi nel corpo della risposta
+               elseif ($response_body_json && (
+                   (isset($response_body_json['status_code']) && ($response_body_json['status_code'] >= 500 || $response_body_json['status_code'] == 520)) ||
+                   (isset($response_body_json['error']) && strpos(strtolower($response_body_json['error']), 'server error') !== false)
+               )) {
+                   error_log('ImgSEO API: Rilevato errore server nel corpo della risposta (codice ' .
+                       (isset($response_body_json['status_code']) ? $response_body_json['status_code'] : 'sconosciuto') .
+                       '). Tentativo di fallback al metodo base64.');
+                   $should_try_fallback = true;
+               }
+               
+               // Se abbiamo identificato un caso in cui il fallback è appropriato, proviamo
+               if ($should_try_fallback) {
+                   // Tentativo di fallback con base64
+                   $base64_result = $this->generate_alt_text_with_base64($image_url, $prompt, $options);
+                   
+                   // Se il fallback ha avuto successo, restituisci il risultato
+                   if (!is_wp_error($base64_result)) {
+                       $cleanup();
+                       return $base64_result;
+                   }
+                   
+                   // Se anche il fallback fallisce, log dell'errore specifico
+                   error_log('ImgSEO API: Anche il fallback base64 è fallito: ' . $base64_result->get_error_message());
+               }
+               
+               // Gestione degli errori originale per altri codici di errore
                $error_message = wp_remote_retrieve_body($response);
                error_log('ImgSEO API: Invalid response - Code ' . $response_code . ' - ' . $error_message);
                $cleanup();
@@ -497,7 +585,337 @@ class ImgSEO_API {
        }
     }
     
-    /**
+   /**
+    * Genera alt text utilizzando il metodo base64 con thumbnail ottimizzate
+    *
+    * @param string $image_url URL dell'immagine originale
+    * @param string $prompt Il prompt per la generazione
+    * @param array $options Opzioni aggiuntive
+    * @return array|WP_Error Risposta API o errore
+    */
+   private function generate_alt_text_with_base64($image_url, $prompt, $options = array()) {
+       $attachment_id = isset($options['attachment_id']) ? intval($options['attachment_id']) : 0;
+       
+       try {
+           // Se abbiamo un ID allegato valido, utilizziamo le thumbnail di WordPress
+           if ($attachment_id > 0) {
+               // Tenta di ottenere la migliore thumbnail disponibile
+               list($thumbnail_url, $thumbnail_path) = $this->get_best_thumbnail($attachment_id);
+               
+               if ($thumbnail_path && file_exists($thumbnail_path)) {
+                   error_log('ImgSEO API: Utilizzo thumbnail per base64: ' . basename($thumbnail_path));
+                   $image_path = $thumbnail_path;
+               } else {
+                   // Fallback all'immagine originale
+                   $image_path = $this->get_local_path_from_url($image_url);
+                   error_log('ImgSEO API: Thumbnail non disponibile, utilizzo immagine originale per base64');
+               }
+           } else {
+               // Senza ID allegato, utilizziamo l'URL originale
+               $image_path = $this->get_local_path_from_url($image_url);
+           }
+           
+           // Verifica che il file esista
+           if (!file_exists($image_path)) {
+               return new WP_Error('file_not_found', 'Unable to find local image file for base64 fallback');
+           }
+           
+           // Verifica che il formato dell'immagine sia supportato
+           $mime_type = mime_content_type($image_path);
+           $supported_formats = array(
+               'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+           );
+           
+           if (!in_array($mime_type, $supported_formats)) {
+               if ($mime_type === 'image/svg+xml') {
+                   error_log('ImgSEO API: File SVG non supportato dall\'API: ' . $image_path);
+                   return new WP_Error('unsupported_format', 'SVG files are not supported by the ImgSEO API. Consider converting them to PNG format.');
+               } else {
+                   error_log('ImgSEO API: Formato immagine non supportato: ' . $mime_type . ' - Path: ' . $image_path);
+                   return new WP_Error('unsupported_format', 'Unsupported image format: ' . $mime_type);
+               }
+           }
+           
+           // Verifica la dimensione del file
+           $file_size = filesize($image_path);
+           $max_size_warning = 1 * 1024 * 1024; // 1MB come soglia di avviso
+           
+           if ($file_size > $max_size_warning) {
+               error_log('ImgSEO API: ATTENZIONE - Immagine grande (' . round($file_size / 1024, 2) . ' KB) - Path: ' . basename($image_path));
+           } else {
+               error_log('ImgSEO API: Dimensione immagine accettabile: ' . round($file_size / 1024, 2) . ' KB - Path: ' . basename($image_path));
+           }
+           
+           // Converti l'immagine in base64
+           $base64_data = $this->get_image_as_base64($image_path);
+           if (empty($base64_data)) {
+               return new WP_Error('base64_conversion_failed', 'Error converting the image to base64');
+           }
+           
+           // Prepara i dati per l'API con base64 invece dell'URL
+           $body = array(
+               'image_data' => $base64_data,
+               'mime_type' => mime_content_type($image_path), // Aggiungiamo il tipo MIME separatamente
+               'prompt' => $prompt,
+               'lang' => isset($options['lang']) ? $options['lang'] : 'it',
+               'optimize' => isset($options['optimize']) ? (bool)$options['optimize'] : true,
+               'request_id' => uniqid('req_')
+           );
+           
+           error_log('ImgSEO API: Invio immagine con metodo base64 per attachment ID: ' . $attachment_id);
+           
+           // Esegui la richiesta API con gli stessi endpoint ma dati diversi
+           $response = wp_remote_post(
+               self::API_ENDPOINT . '/genera-alt-text',  // Stesso endpoint, cambiano solo i dati
+               array(
+                   'headers' => array(
+                       'Content-Type' => 'application/json',
+                       'Accept' => 'application/json',
+                       'imgseo-token' => $this->api_key,
+                       'X-Request-ID' => uniqid()
+                   ),
+                   'body' => wp_json_encode($body),
+                   'timeout' => 45  // Timeout più lungo per le richieste base64
+               )
+           );
+           
+           // Check for connection errors
+           if (is_wp_error($response)) {
+               $error_message = $response->get_error_message();
+               error_log('ImgSEO API (base64): Connection error - ' . $error_message);
+               return $response;
+           }
+           
+           // Check response code
+           $response_code = wp_remote_retrieve_response_code($response);
+           if ($response_code !== 200 && $response_code !== 201) {
+               $error_message = wp_remote_retrieve_body($response);
+               error_log('ImgSEO API (base64): Invalid response - Code ' . $response_code . ' - ' . $error_message);
+               
+               // Log più dettagliato in base al tipo di errore
+               $error_type = 'api_error';
+               $error_message_user = 'API Error (' . $response_code . '): ' . $error_message;
+               
+               // Gestione specifica errore 413 (Payload Too Large)
+               if ($response_code === 413) {
+                   error_log('ImgSEO API (base64): Immagine troppo grande per API - Dimensione: ' . round(filesize($image_path) / 1024, 2) . ' KB - Path: ' . basename($image_path));
+                   $error_type = 'image_too_large';
+                   $error_message_user = 'Image too large for the API (max ~10MB). Try optimizing the image.';
+               }
+               // Log per errori di formato immagine
+               else if ($response_json = json_decode($error_message, true)) {
+                   if (isset($response_json['error']) &&
+                       (strpos($response_json['error'], 'Invalid image data') !== false ||
+                       strpos($response_json['details'], 'unsupported image format') !== false)) {
+                       
+                       error_log('ImgSEO API (base64): Formato immagine non supportato - MIME: ' . mime_content_type($image_path) .
+                               ' - Dimensione: ' . round(filesize($image_path) / 1024, 2) . ' KB' .
+                               ' - Path: ' . $image_path);
+                   }
+               }
+               
+               return new WP_Error($error_type, $error_message_user);
+           }
+           
+           // Decode response
+           $response_body = json_decode(wp_remote_retrieve_body($response), true);
+           
+           // Verifica che la risposta contenga l'alt text
+           if (!isset($response_body['alt_text'])) {
+               error_log('ImgSEO API (base64): Missing alt_text in response');
+               return new WP_Error('invalid_response', 'Invalid API response: alt_text is missing');
+           }
+           
+           // Estrai i crediti residui se disponibili
+           $remaining_credits = isset($response_body['credits_remaining'])
+               ? intval($response_body['credits_remaining'])
+               : null;
+           
+           // Aggiorna i crediti se disponibili nella risposta
+           if ($remaining_credits !== null) {
+               update_option('imgseo_credits', $remaining_credits);
+               
+               // If credits are exhausted, set a warning
+               if ($remaining_credits <= 0) {
+                   set_transient('imgseo_insufficient_credits', true, 3600);
+               } else {
+                   delete_transient('imgseo_insufficient_credits');
+               }
+           } else {
+               // Se non riceviamo i crediti, diminuiamo manualmente di 1
+               $credits = get_option('imgseo_credits', 0);
+               update_option('imgseo_credits', max(0, $credits - 1));
+               
+               if ($credits - 1 <= 0) {
+                   set_transient('imgseo_insufficient_credits', true, 3600);
+               }
+           }
+           
+           error_log('ImgSEO API: Alt text generato con successo tramite base64 per attachment ID: ' . $attachment_id);
+           
+           return $response_body;
+           
+       } catch (Exception $e) {
+           error_log('ImgSEO API: Eccezione durante il fallback base64: ' . $e->getMessage());
+           return new WP_Error('base64_fallback_error', 'Error during base64 fallback: ' . $e->getMessage());
+       }
+   }
+   
+   /**
+    * Trova la migliore thumbnail disponibile per un allegato
+    *
+    * @param int $attachment_id ID dell'allegato
+    * @return array Array con [url_thumbnail, percorso_file_locale]
+    */
+   private function get_best_thumbnail($attachment_id) {
+       // Dimensione massima accettabile per l'API (in byte)
+       $max_acceptable_size = 10 * 1024 * 1024; // 10MB come limite
+       
+       // Array delle dimensioni thumbnail in ordine di preferenza
+       $sizes = array('large', 'medium_large', 'medium', 'thumbnail');
+       
+       // Verifica se l'originale è sotto il limite
+       $original_path = get_attached_file($attachment_id);
+       $original_url = wp_get_attachment_url($attachment_id);
+       
+       if (file_exists($original_path) && filesize($original_path) <= $max_acceptable_size) {
+           error_log('ImgSEO API: Usando immagine originale, dimensione accettabile: ' . round(filesize($original_path) / 1024, 2) . ' KB');
+           return array($original_url, $original_path);
+       }
+       
+       // Se l'originale è troppo grande, cerca una thumbnail adatta
+       foreach ($sizes as $size) {
+           // Ottieni l'URL della thumbnail
+           $thumb = wp_get_attachment_image_src($attachment_id, $size);
+           if ($thumb) {
+               $thumb_url = $thumb[0];
+               
+               // Converti URL in percorso locale
+               $upload_dir = wp_upload_dir();
+               $thumb_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $thumb_url);
+               
+               // Verifica che il file esista e sia sotto il limite di dimensione
+               if (file_exists($thumb_path)) {
+                   $file_size = filesize($thumb_path);
+                   if ($file_size <= $max_acceptable_size) {
+                       error_log('ImgSEO API: Usando thumbnail ' . $size . ', dimensione: ' . round($file_size / 1024, 2) . ' KB');
+                       return array($thumb_url, $thumb_path);
+                   } else {
+                       error_log('ImgSEO API: Thumbnail ' . $size . ' troppo grande (' . round($file_size / 1024, 2) . ' KB), provo la successiva');
+                   }
+               }
+           }
+       }
+       
+       // Se arriviamo qui, tutte le thumbnail sono troppo grandi o non disponibili
+       // Restituisci la thumbnail più piccola disponibile come ultimo tentativo
+       foreach (array_reverse($sizes) as $size) {
+           $thumb = wp_get_attachment_image_src($attachment_id, $size);
+           if ($thumb) {
+               $thumb_url = $thumb[0];
+               $upload_dir = wp_upload_dir();
+               $thumb_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $thumb_url);
+               
+               if (file_exists($thumb_path)) {
+                   error_log('ImgSEO API: Tutte le immagini sono oltre il limite di dimensione. Usando ' . $size . ' come ultima risorsa: ' .
+                             round(filesize($thumb_path) / 1024, 2) . ' KB');
+                   return array($thumb_url, $thumb_path);
+               }
+           }
+       }
+       
+       // Se proprio non troviamo alternative, restituisci l'originale e lascia che l'API gestisca l'errore
+       error_log('ImgSEO API: Nessuna thumbnail trovata, provo con l\'originale: ' . round(filesize($original_path) / 1024, 2) . ' KB');
+       return array($original_url, $original_path);
+   }
+   
+   /**
+    * Converte un'immagine in stringa base64
+    *
+    * @param string $file_path Percorso del file immagine
+    * @return string|false Stringa base64 o false in caso di errore
+    */
+   private function get_image_as_base64($file_path) {
+       // Security: Validate path is within upload directory
+       $upload_dir = wp_upload_dir();
+       $upload_basedir = realpath($upload_dir['basedir']);
+       $resolved_path = realpath($file_path);
+       
+       if ($resolved_path === false || strpos($resolved_path, $upload_basedir) !== 0) {
+           error_log('ImgSEO Security: Blocked base64 conversion for unsafe path: ' . $file_path);
+           return false;
+       }
+       
+       // Verifica che il file esista
+       if (!file_exists($file_path)) {
+           error_log('ImgSEO API: File non trovato per conversione base64: ' . $file_path);
+           return false;
+       }
+       
+       // Ottieni tipo MIME
+       $mime_type = mime_content_type($file_path);
+       
+       // Log della dimensione del file per debug
+       $file_size = filesize($file_path);
+       error_log('ImgSEO API: Dimensione file per base64: ' . round($file_size / 1024, 2) . ' KB');
+       
+       // Leggi e codifica file
+       $image_data = file_get_contents($file_path);
+       $base64 = base64_encode($image_data);
+       
+       // Restituisci solo la stringa base64 senza prefisso data URI
+       // L'API si aspetta solo il contenuto base64 puro, non il formato data URI completo
+       return $base64;
+   }
+   
+   /**
+    * Converte un URL immagine nel percorso file locale
+    *
+    * @param string $image_url URL dell'immagine
+    * @return string Percorso locale del file
+    */
+   private function get_local_path_from_url($image_url) {
+       // Gestione URL WordPress standard
+       $upload_dir = wp_upload_dir();
+       $file_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $image_url);
+       
+       // Security: Validate that the path is within upload directory
+       $upload_basedir = realpath($upload_dir['basedir']);
+       $resolved_path = realpath($file_path);
+       
+       if ($resolved_path === false || strpos($resolved_path, $upload_basedir) !== 0) {
+           // Path is outside upload directory - security risk
+           error_log('ImgSEO Security: Blocked path traversal attempt: ' . $image_url);
+           
+           // Fallback: try to get safe path via attachment ID
+           $attachment_id = attachment_url_to_postid($image_url);
+           if ($attachment_id) {
+               $safe_path = get_attached_file($attachment_id);
+               $safe_resolved = realpath($safe_path);
+               if ($safe_resolved && strpos($safe_resolved, $upload_basedir) === 0) {
+                   return $safe_path;
+               }
+           }
+           return false; // Reject unsafe path
+       }
+       
+       // Gestione URL con CDN o personalizzati
+       if (!file_exists($file_path)) {
+           // Tenta di risolvere l'URL tramite l'ID dell'allegato
+           $attachment_id = attachment_url_to_postid($image_url);
+           if ($attachment_id) {
+               $safe_path = get_attached_file($attachment_id);
+               $safe_resolved = realpath($safe_path);
+               if ($safe_resolved && strpos($safe_resolved, $upload_basedir) === 0) {
+                   return $safe_path;
+               }
+           }
+       }
+       
+       return $file_path;
+   }
+   
+   /**
      * Checks if the site is offline (not accessible from the internet)
      *
      * @return bool True if the site is offline, false otherwise

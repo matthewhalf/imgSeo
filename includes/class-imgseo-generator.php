@@ -353,10 +353,8 @@ class ImgSEO_Generator {
 
 
         // Ottieni il titolo della pagina genitore se disponibile
-
-        $parent_post_id = get_post_field('post_parent', $attachment_id);
-
-        $parent_post_title = $parent_post_id ? get_the_title($parent_post_id) : '';
+            $parent_post_id = wp_get_post_parent_id($attachment_id);
+            $parent_post_title = $parent_post_id ? get_the_title($parent_post_id) : '';
 
 
 

@@ -180,7 +180,7 @@ class ImgSEO_Generator_Base {
 
     public function generate_alt_text($image_url, $attachment_id, $parent_post_title = '') {
 
-        error_log('ImgSEO DEBUG: generate_alt_text chiamato per URL: ' . $image_url . ', ID: ' . $attachment_id);
+        imgseo_debug_log('generate_alt_text chiamato per URL: ' . $image_url . ', ID: ' . $attachment_id);
 
 
 
@@ -196,7 +196,7 @@ class ImgSEO_Generator_Base {
 
 
 
-        error_log('ImgSEO DEBUG: Impostazioni - lingua: ' . $language_code . ', max_chars: ' . $max_characters);
+        imgseo_debug_log('Impostazioni - lingua: ' . $language_code . ', max_chars: ' . $max_characters);
 
 
 
@@ -314,51 +314,96 @@ class ImgSEO_Generator_Base {
 
 
 
-        // Ottieni il prompt personalizzato
-
-        $prompt_template = get_option('imgseo_custom_prompt', 'Generate SEO-friendly alt text describing the main visual elements of this image. Output only the alt text in {language}, maximum {max_characters} characters. {page_title_info} {image_name_info} Naturally incorporate relevant keywords and aim to be as close as possible to the specified character limit.');
+        // Check if this is a WooCommerce product image
+        $is_woocommerce_product = false;
+        $parent_post_id = wp_get_post_parent_id($attachment_id);
+        
+        if ($parent_post_id) {
+            $post_type = get_post_type($parent_post_id);
+            if ($post_type === 'product') {
+                $is_woocommerce_product = true;
+                error_log("ImgSEO Generator: Detected WooCommerce product image for post ID: {$parent_post_id}");
+            }
+        }
+        
+        // Get the appropriate prompt template based on post type
+        $enable_woocommerce_prompt = get_option('imgseo_enable_woocommerce_prompt', 0);
+        
+        if ($is_woocommerce_product && $enable_woocommerce_prompt) {
+            // Use WooCommerce product prompt
+            $prompt_template = get_option('imgseo_woocommerce_prompt', 'Generate alt text for this product image: {product_name} by {product_brand}\n\nContext: {product_short_description} - {product_categories} - {product_price} {on_sale} - {product_attributes}\n\nDescribe the visual elements shown (colors, style, angle, details) while naturally incorporating the product name. Keep it descriptive, SEO-friendly, under {max_characters} characters in {language}. Focus on what customers would want to know about this product image.');
+            error_log("ImgSEO Generator: Using WooCommerce product prompt");
+        } else {
+            // Use standard prompt
+            $prompt_template = get_option('imgseo_custom_prompt', 'Generate SEO-friendly alt text describing the main visual elements of this image. Output only the alt text in {language}, maximum {max_characters} characters. {page_title_info} {image_name_info} Naturally incorporate relevant keywords and aim to be as close as possible to the specified character limit.');
+        }
 
 
 
         // Preparazione delle variabili per la sostituzione
-
         $page_title_info = '';
-
         if ($include_page_title && !empty($parent_post_title)) {
-
             $page_title_info = "the page title is: $parent_post_title";
-
         }
-
-
 
         $image_name_info = '';
-
         if ($include_image_name) {
-
             $image_name = basename($image_url);
-
             if ($image_name) {
-
                 $image_name_info = "the image name is: $image_name";
-
             }
-
+        }
+        
+        // Variabili WooCommerce specifiche
+        $product_name = '';
+        $product_brand = '';
+        $product_short_description = '';
+        $product_categories = '';
+        $product_price = '';
+        $on_sale = '';
+        $product_attributes = '';
+        
+        // Se è un prodotto WooCommerce, estrai le informazioni del prodotto
+        if ($is_woocommerce_product && $enable_woocommerce_prompt && $parent_post_id && function_exists('wc_get_product')) {
+            $product = wc_get_product($parent_post_id);
+            
+            if ($product) {
+                // Estrai le informazioni del prodotto
+                $product_name = $product->get_name();
+                $product_short_description = wp_strip_all_tags($product->get_short_description());
+                $product_price = $product->get_price_html();
+                $product_stock_status = $product->is_in_stock() ? 'available' : 'out of stock';
+                
+                // Categorie del prodotto
+                $product_categories = implode(', ', wp_get_post_terms($parent_post_id, 'product_cat', ['fields' => 'names']));
+                
+                // Brand del prodotto (attributo)
+                $product_brand = $product->get_attribute('brand') ?: $product->get_attribute('pa_brand');
+                
+                // Stato di vendita
+                $on_sale = $product->is_on_sale() ? '(ON SALE)' : '';
+                
+                // Attributi del prodotto
+                $product_attributes = $this->get_product_attributes_string($product);
+                
+                error_log("ImgSEO Generator: Extracted WooCommerce product info for product ID: {$parent_post_id}");
+            }
         }
 
-
-
         // Sostituisci le variabili nel template
-
-        $prompt = str_replace(
-
-            ['{language}', '{max_characters}', '{page_title_info}', '{image_name_info}'],
-
-            [$language_name, $max_characters, $page_title_info, $image_name_info],
-
-            $prompt_template
-
-        );
+        $replacement_vars = [
+            '{language}', '{max_characters}', '{page_title_info}', '{image_name_info}',
+            '{product_name}', '{product_brand}', '{product_short_description}', '{product_categories}',
+            '{product_price}', '{on_sale}', '{product_attributes}'
+        ];
+        
+        $replacement_values = [
+            $language_name, $max_characters, $page_title_info, $image_name_info,
+            $product_name, $product_brand, $product_short_description, $product_categories,
+            $product_price, $on_sale, $product_attributes
+        ];
+        
+        $prompt = str_replace($replacement_vars, $replacement_values, $prompt_template);
 
 
 
@@ -468,6 +513,43 @@ class ImgSEO_Generator_Base {
 
         return $alt_text;
 
+    }
+
+    /**
+     * Estrae gli attributi del prodotto WooCommerce come stringa
+     *
+     * @param WC_Product $product Il prodotto WooCommerce
+     * @return string Gli attributi del prodotto come stringa
+     */
+    private function get_product_attributes_string($product) {
+        if (!$product) {
+            return '';
+        }
+        
+        $attributes = [];
+        $product_attributes = $product->get_attributes();
+        
+        foreach ($product_attributes as $attribute) {
+            if ($attribute->get_variation()) {
+                continue; // Salta gli attributi di variazione
+            }
+            
+            $attribute_name = wc_attribute_label($attribute->get_name());
+            $attribute_values = [];
+            
+            if ($attribute->is_taxonomy()) {
+                $terms = wp_get_post_terms($product->get_id(), $attribute->get_name(), ['fields' => 'names']);
+                $attribute_values = $terms;
+            } else {
+                $attribute_values = $attribute->get_options();
+            }
+            
+            if (!empty($attribute_values)) {
+                $attributes[] = $attribute_name . ': ' . implode(', ', $attribute_values);
+            }
+        }
+        
+        return implode(' | ', $attributes);
     }
 
 }

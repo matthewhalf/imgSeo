@@ -4,13 +4,13 @@ Contributors: pianoweb, jonathanwambua
 
 Donate link: https://imgseo.net/
 
-Tags: seo, images, alt text, accessibility, wcag, european accessibility act, eaa, ai, media library, image optimization, image renaming, wordpress accessibility, wcag 2.1, automatic alt text, vision ai, filename optimizer, ecommerce seo, web compliance, image seo, alt text generator
+Tags: seo, image seo, alt text, accessibility, image renamer
 
 Requires at least: 5.0
 
 Tested up to: 6.8.1
 
-Stable tag: 1.1.8
+Stable tag: 1.2.7
 
 Requires PHP: 7.3
 
@@ -87,6 +87,8 @@ With the European Accessibility Act (EAA) becoming mandatory on **June 28, 2025*
 * **Cloud Dashboard**: Track usage, manage tokens, and export detailed reports [dashboard.imgseo.net/login](https://dashboard.imgseo.net/login)
 
 * **Team Collaboration**: Multiple user accounts and API token management
+
+* **JSON-LD Structured Data**: Automatic Schema.org markup generation for enhanced SEO
 
 * **Browser Extension**: Access ImgSEO features outside of WordPress (available separately)
 
@@ -247,6 +249,73 @@ Yes, ImgSEO is compatible (this upgrade still in beta) with major page builders 
 
 
 == Changelog ==
+
+= 1.2.7 =
+* **SECURITY**: Fixed potential API key exposure in error logs
+* **SECURITY**: Added path traversal protection - File operations now validate paths are within upload directory
+* **SECURITY**: Enhanced AJAX input validation - Added API key format validation and malicious pattern detection
+* **SECURITY**: Implemented rate limiting - Maximum 5 API verification attempts per 10 minutes per user
+* **SECURITY**: Added attachment ID validation helper - Ensures proper permission checks for all file operations
+* **SECURITY**: Strengthened sitemap file generation - Additional path validation before writing sitemap files
+* **Improved**: Enhanced security logging - Path traversal attempts are now logged without exposing sensitive data
+
+= 1.2.6 =
+* **NEW**: Redesigned Image Sitemap Management System - Replaced single "Generate Sitemap" button with intuitive ACTIVATE and REFRESH buttons for better user control
+* **NEW**: Automatic Sitemap Updates - Added scheduled auto-refresh functionality with configurable intervals (hourly, daily, weekly)
+* **Enhanced UX**: Smart notification system alerts users when sitemap needs updating after new image additions
+* **Improved Performance**: Static sitemap generation with automatic permalink rule updates eliminates 4xx errors and reduces server load
+* **Better Control**: Manual refresh capability combined with intelligent auto-updates ensures sitemaps stay current without constant manual intervention
+* **Streamlined Interface**: Cleaner admin interface with status indicators and auto-refresh settings for optimal sitemap management
+
+= 1.2.5 =
+* **FIXED**: Resolved PHP 8.3 deprecation warnings - Added proper property declarations to IMGSEO_Init class
+* **PHP 8.3 Compatibility**: Eliminated "Creation of dynamic property" deprecation notices
+* **Improved Code Quality**: Enhanced class structure with explicit property declarations
+* **Cleaner Logs**: No more PHP deprecation warnings filling up debug logs
+* **Modern PHP Support**: Full compatibility with latest PHP versions and best practices
+
+= 1.2.4 =
+* **FIXED**: Resolved widget content loss issue during modifications - Removed interfering hook that caused widget data reset
+* **FIXED**: Eliminated debug log spam in console - Implemented centralized debug control system (IMGSEO_DEBUG_MODE) to drastically reduce log messages
+* **Improved Stability**: Widgets can now be modified without losing saved content
+* **Clean Console**: No more excessive debug messages in logs (only activatable when needed)
+* **Widget Compatibility**: Enhanced compatibility with all WordPress widget types
+* **Performance**: Reduced system log load by eliminating unnecessary debug messages
+
+= 1.2.3 =
+* **NEW**: Implemented robust fallback mechanism - Automatically detects 403 Forbidden errors (hotlinking protection) and 5xx server errors (including 520 Cloudflare) and uses alternative method with base64 and WordPress thumbnails
+* **NEW**: Added option to always force base64 method usage - Complete bypass of anti-hotlinking protections and Cloudflare blocks
+* **Performance Optimization**: Uses WordPress thumbnails (large → medium_large → medium) instead of original images to reduce transmitted data size
+* **Improved Compatibility**: Now works with sites implementing anti-hotlinking security measures or when remote servers have temporary issues
+* **Enhanced Reliability**: Resilient system that ensures alt text generation even with connection errors or temporary server-side problems
+* **User Control**: Option to always choose base64 method for situations where image access problems occur
+
+= 1.2.2 =
+
+* **NEW**: Added dedicated AI prompt for WooCommerce product images - Enhanced e-commerce optimization with specialized prompts that generate more accurate and conversion-focused alt text for product images
+* **Enhanced WooCommerce Integration**: Improved product image recognition and context-aware descriptions for better SEO and accessibility compliance
+* **E-commerce Optimization**: Specialized AI prompts now consider product attributes, categories, and commercial context for more effective product image descriptions
+
+= 1.2.1 =
+
+* **MAJOR FIX**: Resolved homepage image detection - now generates JSON-LD for ALL images on homepage (not just 2)
+* **Enhanced Image Scanning**: New universal scanner detects images from posts, widgets, themes, and external sources
+* **Improved Statistics**: Accurate JSON-LD statistics with clear quality metrics (complete vs partial data)
+* **Simplified Admin Interface**: Streamlined structured data settings page for better user experience
+* **Bug Fix**: Corrected PHP syntax error in universal scanner class
+* **Performance**: Optimized scanning system with intelligent caching and conditional execution
+* **Better Coverage**: Now detects images from page builders, CDN, FTP uploads, and CSS backgrounds
+
+= 1.2.0 =
+
+* Added JSON-LD structured data generation for images
+* Enhanced SEO with automatic Schema.org ImageObject markup
+* New admin settings for structured data configuration
+
+= 1.1.9 =
+
+* Added Image Sitemap Generation.
+
 
 = 1.1.8 =
 

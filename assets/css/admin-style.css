@@ -486,3 +486,108 @@
 .hidden {
     display: none !important;
 }
+
+/* Stili per le statistiche JSON-LD */
+.imgseo-stats-breakdown {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid #0073aa;
+}
+
+.imgseo-breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.imgseo-breakdown-item:last-child {
+    border-bottom: none;
+}
+
+.imgseo-breakdown-label {
+    font-weight: 500;
+    color: #555;
+}
+
+.imgseo-breakdown-value {
+    font-weight: 600;
+    color: #0073aa;
+}
+
+.imgseo-stat-sublabel {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+/* Aggiornamenti per le statistiche per tipo di contenuto */
+.imgseo-content-type-coverage {
+    background: #0073aa;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.imgseo-content-type-details span {
+    margin-right: 15px;
+    font-size: 13px;
+    color: #666;
+}
+
+.imgseo-content-type-details span:last-child {
+    margin-right: 0;
+}
+
+/* Stili per System Status semplificato */
+.imgseo-system-status-simple {
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.imgseo-status-success {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 12px 15px;
+    border-radius: 4px;
+}
+
+.imgseo-status-warning {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #856404;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 12px 15px;
+    border-radius: 4px;
+}
+
+.imgseo-status-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 12px 15px;
+    border-radius: 4px;
+}
+
+.imgseo-status-success .dashicons,
+.imgseo-status-warning .dashicons,
+.imgseo-status-error .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}

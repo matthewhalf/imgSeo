@@ -160,7 +160,7 @@ class ImgSEO_Batch_Processor extends ImgSEO_Generator_Base {
         $images_to_process = count($images_data);
         
         if ($images_to_process === 0) {
-            wp_send_json_error(['message' => 'Nessuna immagine da elaborare. Tutte le immagini hanno già un testo alternativo.']);
+            wp_send_json_error(['message' => 'No images to process. All images already have alternative text.']);
             return;
         }
         

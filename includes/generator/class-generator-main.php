@@ -196,7 +196,7 @@ class ImgSEO_Generator_Main {
      * @return ImgSEO_Alt_Text_Generator
      */
     public function get_alt_text_generator() {
-        error_log('ImgSEO DEBUG: get_alt_text_generator chiamato, restituendo istanza: ' . (is_object($this->alt_text_generator) ? get_class($this->alt_text_generator) : 'non è un oggetto'));
+        imgseo_debug_log('get_alt_text_generator chiamato, restituendo istanza: ' . (is_object($this->alt_text_generator) ? get_class($this->alt_text_generator) : 'non è un oggetto'));
         return $this->alt_text_generator;
     }
 }

@@ -74,6 +74,26 @@ class ImgSEO_Menu_Manager {
             'imgseo-renamer',
             array($this, 'render_renamer_page')
         );
+        
+        // Image Sitemap
+        add_submenu_page(
+            'imgseo',                                           // Slug del menu principale
+            __('Image Sitemap', IMGSEO_TEXT_DOMAIN),            // Titolo pagina
+            __('Img Sitemap', IMGSEO_TEXT_DOMAIN),              // Testo menu
+            'manage_options',                                   // Capability
+            'imgseo-image-sitemap',                             // Slug del menu
+            array($this, 'render_image_sitemap_page')           // Callback
+        );
+        
+        // Structured Data
+        add_submenu_page(
+            'imgseo',                                           // Slug del menu principale
+            __('Structured Data', IMGSEO_TEXT_DOMAIN),          // Titolo pagina
+            __('Structured Data', IMGSEO_TEXT_DOMAIN),          // Testo menu
+            'manage_options',                                   // Capability
+            'imgseo-structured-data',                           // Slug del menu
+            array($this, 'render_structured_data_page')         // Callback
+        );
     }
     
     /**
@@ -104,5 +124,25 @@ class ImgSEO_Menu_Manager {
         $renamer_ui = Renamer_UI_Manager::get_instance();
         // Delega il rendering della pagina
         $renamer_ui->render_renamer_page();
+    }
+    
+    /**
+     * Renderizza la pagina della Image Sitemap (delega a ImgSEO_Image_Sitemap_Generator)
+     */
+    public function render_image_sitemap_page() {
+        // Assumendo che ImgSEO_Image_Sitemap_Generator sia un singleton
+        // e abbia un metodo render_admin_page()
+        $sitemap_generator = ImgSEO_Image_Sitemap_Generator::get_instance();
+        $sitemap_generator->render_admin_page();
+    }
+    
+    /**
+     * Renderizza la pagina dei Structured Data (delega a ImgSEO_Structured_Data_Admin)
+     */
+    public function render_structured_data_page() {
+        // Ottieni l'istanza della classe ImgSEO_Structured_Data_Admin
+        $structured_data_admin = ImgSEO_Structured_Data_Admin::get_instance();
+        // Delega il rendering della pagina
+        $structured_data_admin->render_admin_page();
     }
 }

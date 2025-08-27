@@ -37,32 +37,32 @@ class ImgSEO_Alt_Text_Generator extends ImgSEO_Generator_Base {
         static $initialized = false;
         
         if ($initialized) {
-            error_log('ImgSEO DEBUG: initialize_hooks già chiamato, ignoro duplicato');
+            imgseo_debug_log('initialize_hooks già chiamato, ignoro duplicato');
             return;
         }
         
         $initialized = true;
-        error_log('ImgSEO DEBUG: initialize_hooks eseguito - inizio registrazione');
+        imgseo_debug_log('initialize_hooks eseguito - inizio registrazione');
         
         // Ottieni l'istanza singleton per la registrazione
         $instance = IMGSEO_Init::init()->generator->get_alt_text_generator();
         if (!$instance) {
-            error_log('ImgSEO DEBUG: ERRORE CRITICO - impossibile ottenere istanza generator');
+            imgseo_debug_log('ERRORE CRITICO - impossibile ottenere istanza generator');
             return;
         }
         
-        error_log('ImgSEO DEBUG: Istanza generator ottenuta: ' . (is_object($instance) ? get_class($instance) : 'non è un oggetto'));
+        imgseo_debug_log('Istanza generator ottenuta: ' . (is_object($instance) ? get_class($instance) : 'non è un oggetto'));
         
         // Registra l'hook standard di WordPress per gli upload
         add_action('add_attachment', array($instance, 'auto_generate_alt_text'), 10);
-        error_log('ImgSEO DEBUG: Hook add_attachment registrato per auto_generate_alt_text - priorità 10');
+        imgseo_debug_log('Hook add_attachment registrato per auto_generate_alt_text - priorità 10');
         
         // Registra anche un hook per upload API REST (e.g. Gutenberg)
         add_action('rest_insert_attachment', array($instance, 'auto_generate_alt_text'), 10);
-        error_log('ImgSEO DEBUG: Hook rest_insert_attachment registrato per auto_generate_alt_text - priorità 10');
+        imgseo_debug_log('Hook rest_insert_attachment registrato per auto_generate_alt_text - priorità 10');
         
         // Registrazione debug sulla funzione di callback
-        error_log('ImgSEO DEBUG: Funzione di callback: ' . (is_callable(array($instance, 'auto_generate_alt_text')) ? 'è callable' : 'NON è callable'));
+        imgseo_debug_log('Funzione di callback: ' . (is_callable(array($instance, 'auto_generate_alt_text')) ? 'è callable' : 'NON è callable'));
     }
     
     /**
@@ -72,47 +72,47 @@ class ImgSEO_Alt_Text_Generator extends ImgSEO_Generator_Base {
      * @param int $attachment_id Attachment ID
      */
     public function auto_generate_alt_text($attachment_id) {
-        error_log('ImgSEO DEBUG: auto_generate_alt_text chiamato per ID: ' . $attachment_id);
+        imgseo_debug_log('auto_generate_alt_text chiamato per ID: ' . $attachment_id);
         
         // Verifica che sia un'immagine
         if (!wp_attachment_is_image($attachment_id)) {
-            error_log('ImgSEO DEBUG: ID ' . $attachment_id . ' non è un\'immagine, uscita');
+            imgseo_debug_log('ID ' . $attachment_id . ' non è un\'immagine, uscita');
             return;
         }
         
         // Verifica se la funzionalità è abilitata
         $auto_generate = get_option('imgseo_auto_generate', 0);
-        error_log('ImgSEO DEBUG: auto_generate è: ' . ($auto_generate ? 'ATTIVO' : 'DISATTIVATO'));
+        imgseo_debug_log('auto_generate è: ' . ($auto_generate ? 'ATTIVO' : 'DISATTIVATO'));
         
         if (!$auto_generate) {
-            error_log('ImgSEO DEBUG: Generazione automatica disattivata, ignorando');
+            imgseo_debug_log('Generazione automatica disattivata, ignorando');
             return;
         }
         
         // Verifica se esiste già un alt text
         $current_alt_text = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
         $overwrite = get_option('imgseo_overwrite', 0);
-        error_log('ImgSEO DEBUG: Testo alternativo attuale: ' . ($current_alt_text ? '"'.$current_alt_text.'"' : 'NESSUNO') . ', overwrite: ' . $overwrite);
+        imgseo_debug_log('Testo alternativo attuale: ' . ($current_alt_text ? '"'.$current_alt_text.'"' : 'NESSUNO') . ', overwrite: ' . $overwrite);
         
         if (!$overwrite && !empty($current_alt_text)) {
-            error_log('ImgSEO DEBUG: Testo alternativo già presente e overwrite disattivato, ignoro');
+            imgseo_debug_log('Testo alternativo già presente e overwrite disattivato, ignoro');
             return;
         }
         
         // Verifica crediti disponibili
         $credits_exhausted = get_transient('imgseo_insufficient_credits');
         $credits = get_option('imgseo_credits', 0);
-        error_log('ImgSEO DEBUG: Crediti disponibili: ' . $credits . ', esauriti: ' . ($credits_exhausted ? 'SÌ' : 'NO'));
+        imgseo_debug_log('Crediti disponibili: ' . $credits . ', esauriti: ' . ($credits_exhausted ? 'SÌ' : 'NO'));
         
         if ($credits_exhausted || $credits < 1) {
-            error_log('ImgSEO DEBUG: Crediti insufficienti, generazione saltata');
+            imgseo_debug_log('Crediti insufficienti, generazione saltata');
             return;
         }
         
         // Previene multiple elaborazioni per la stessa immagine
         $processing_key = 'imgseo_processing_' . $attachment_id;
         if (get_transient($processing_key)) {
-            error_log('ImgSEO DEBUG: Elaborazione già in corso per ID: ' . $attachment_id . ', ignoro');
+            imgseo_debug_log('Elaborazione già in corso per ID: ' . $attachment_id . ', ignoro');
             return;
         }
         
@@ -125,7 +125,7 @@ class ImgSEO_Alt_Text_Generator extends ImgSEO_Generator_Base {
             // Ottieni l'URL dell'immagine
             $image_url = wp_get_attachment_url($attachment_id);
             if (!$image_url) {
-                error_log('ImgSEO DEBUG: Impossibile ottenere URL per ID: ' . $attachment_id);
+                imgseo_debug_log('Impossibile ottenere URL per ID: ' . $attachment_id);
                 return;
             }
             
@@ -135,7 +135,7 @@ class ImgSEO_Alt_Text_Generator extends ImgSEO_Generator_Base {
                 $image_data = wp_get_attachment_image_src($attachment_id, $size);
                 if ($image_data && !empty($image_data[0])) {
                     $image_url = $image_data[0];
-                    error_log('ImgSEO DEBUG: Usando versione ridotta ' . $size . ': ' . $image_url);
+                    imgseo_debug_log('Usando versione ridotta ' . $size . ': ' . $image_url);
                     break;
                 }
             }
@@ -145,17 +145,17 @@ class ImgSEO_Alt_Text_Generator extends ImgSEO_Generator_Base {
             $parent_post_title = $parent_post_id ? get_the_title($parent_post_id) : '';
             
             // Genera il testo alternativo
-            error_log('ImgSEO DEBUG: Avvio generazione per ID: ' . $attachment_id);
+            imgseo_debug_log('Avvio generazione per ID: ' . $attachment_id);
             $alt_text = $this->generate_alt_text($image_url, $attachment_id, $parent_post_title);
             
             if (is_wp_error($alt_text)) {
-                error_log('ImgSEO DEBUG: Errore durante la generazione: ' . $alt_text->get_error_message());
+                imgseo_debug_log('Errore durante la generazione: ' . $alt_text->get_error_message());
                 return;
             }
             
             // Aggiorna il testo alternativo
             update_post_meta($attachment_id, '_wp_attachment_image_alt', $alt_text);
-            error_log('ImgSEO DEBUG: Testo alternativo generato e salvato: "' . $alt_text . '"');
+            imgseo_debug_log('Testo alternativo generato e salvato: "' . $alt_text . '"');
             
             // Aggiorna gli altri campi in base alle opzioni
             $update_title = get_option('imgseo_update_title', 0);
@@ -182,10 +182,10 @@ class ImgSEO_Alt_Text_Generator extends ImgSEO_Generator_Base {
                 wp_update_post($attachment_data);
                 add_action('attachment_updated', array(IMGSEO_Init::init(), 'handle_attachment_update'), 20);
                 
-                error_log('ImgSEO DEBUG: Altri campi aggiornati in base alle opzioni');
+                imgseo_debug_log('Altri campi aggiornati in base alle opzioni');
             }
         } catch (Exception $e) {
-            error_log('ImgSEO DEBUG: Eccezione durante la generazione: ' . $e->getMessage());
+            imgseo_debug_log('Eccezione durante la generazione: ' . $e->getMessage());
         } finally {
             // Rimuovi il lock di elaborazione
             delete_transient($processing_key);

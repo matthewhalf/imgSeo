@@ -95,11 +95,19 @@ private function __construct() {
 
 
         // Custom Prompt Section
-
         register_setting('imgseo_prompt_settings', 'imgseo_custom_prompt', array(
-
             'default' => 'Carefully analyze the image and generate an SEO-friendly alt text that accurately describes the main visual elements. {page_title_info} {image_name_info} Include relevant keywords extracted from the page title and file name when available. Describe the image concisely yet comprehensively in {language}, using exactly {max_characters} characters or getting as close as possible to this limit. The description should be natural, informative, and optimized for search engines. Provide only the alt text without quotation marks, containing apostrophes, or other textual decorations.'
-
+        ));
+        
+        // WooCommerce Product Prompt Section
+        register_setting('imgseo_prompt_settings', 'imgseo_woocommerce_prompt', array(
+            'default' => 'Generate alt text for this product image: {product_name} by {product_brand}\n\nContext: {product_short_description} - {product_categories} - {product_price} {on_sale} - {product_attributes}\n\nDescribe the visual elements shown (colors, style, angle, details) while naturally incorporating the product name. Keep it descriptive, SEO-friendly, under {max_characters} characters in {language}. Focus on what customers would want to know about this product image.'
+        ));
+        
+        // Enable WooCommerce Specific Prompt
+        register_setting('imgseo_prompt_settings', 'imgseo_enable_woocommerce_prompt', array(
+            'default' => 0,
+            'sanitize_callback' => 'absint'
         ));
 
 
@@ -156,7 +164,11 @@ private function __construct() {
 
         ));
 
-
+        // Always use base64 option to bypass hotlinking protections and Cloudflare restrictions
+        register_setting('imgseo_general_settings', 'imgseo_always_use_base64', array(
+            'default' => 0,
+            'sanitize_callback' => 'absint'
+        ));
 
         // Footer badge settings
 
@@ -225,35 +237,46 @@ private function __construct() {
 
 
         // Custom Prompt Section
-
         add_settings_section(
-
             'imgseo_prompt_section',
-
             __('Custom Prompt', IMGSEO_TEXT_DOMAIN),
-
             array($this, 'render_prompt_section'),
-
             'imgseo_prompt_settings'
-
         );
 
-
-
         // Custom Prompt Field
-
         add_settings_field(
-
             'imgseo_custom_prompt',
-
             __('Custom Prompt', IMGSEO_TEXT_DOMAIN),
-
             array($this, 'render_custom_prompt_field'),
-
             'imgseo_prompt_settings',
-
             'imgseo_prompt_section'
-
+        );
+        
+        // WooCommerce Prompt Section
+        add_settings_section(
+            'imgseo_woocommerce_prompt_section',
+            __('WooCommerce Product Prompt', IMGSEO_TEXT_DOMAIN),
+            array($this, 'render_woocommerce_prompt_section'),
+            'imgseo_prompt_settings'
+        );
+        
+        // Enable WooCommerce Prompt Field
+        add_settings_field(
+            'imgseo_enable_woocommerce_prompt',
+            __('Enable WooCommerce Prompt', IMGSEO_TEXT_DOMAIN),
+            array($this, 'render_enable_woocommerce_prompt_field'),
+            'imgseo_prompt_settings',
+            'imgseo_woocommerce_prompt_section'
+        );
+        
+        // WooCommerce Prompt Field
+        add_settings_field(
+            'imgseo_woocommerce_prompt',
+            __('WooCommerce Product Prompt', IMGSEO_TEXT_DOMAIN),
+            array($this, 'render_woocommerce_prompt_field'),
+            'imgseo_prompt_settings',
+            'imgseo_woocommerce_prompt_section'
         );
 
 
@@ -441,6 +464,16 @@ private function __construct() {
         );
 
 
+        // Add always use base64 field to general settings
+        add_settings_field(
+            'imgseo_always_use_base64',
+            __('Force base64 image transfer', IMGSEO_TEXT_DOMAIN),
+            array($this, 'render_always_use_base64_field'),
+            'imgseo_general_settings',
+            'imgseo_general_section'
+        );
+
+
 
 
 
@@ -459,6 +492,7 @@ private function __construct() {
             'imgseo_update_section'
 
         );
+
 
     }
 
@@ -987,62 +1021,105 @@ private function __construct() {
 
 
     /**
-
      * Render custom prompt field
-
      */
-
     public function render_custom_prompt_field() {
-
         $default_prompt = 'Carefully analyze the image and generate an SEO-friendly alt text that accurately describes the main visual elements. {page_title_info} {image_name_info} Include relevant keywords extracted from the page title and file name when available. Describe the image concisely yet comprehensively in {language}, using exactly {max_characters} characters or getting as close as possible to this limit. The description should be natural, informative, and optimized for search engines. Provide only the alt text without quotation marks, containing apostrophes, or other textual decorations.';
-
         $custom_prompt = get_option('imgseo_custom_prompt', $default_prompt);
-
         ?>
-
         <textarea name="imgseo_custom_prompt" id="imgseo_custom_prompt" rows="6" cols="80" class="large-text code"><?php echo esc_textarea($custom_prompt); ?></textarea>
 
-
-
         <p class="description">
-
             <?php _e('Customize the prompt sent to the AI to generate alt text. Use the dynamic variables listed above to make the prompt more effective.', IMGSEO_TEXT_DOMAIN); ?>
-
         </p>
 
-
-
         <button type="button" id="reset_prompt" class="button button-secondary" style="margin-top: 10px;">
-
             <span class="dashicons dashicons-image-rotate" style="margin-top: 3px;"></span>
-
             <?php _e('Reset Default Prompt', IMGSEO_TEXT_DOMAIN); ?>
-
         </button>
 
-
-
         <script>
-
             jQuery(document).ready(function($) {
-
                 $('#reset_prompt').on('click', function() {
-
                     if (confirm('<?php _e('Are you sure you want to reset to the default prompt? This operation will overwrite the current prompt.', IMGSEO_TEXT_DOMAIN); ?>')) {
-
                         $('#imgseo_custom_prompt').val('Carefully analyze the image and generate an SEO-friendly alt text that accurately describes the main visual elements. {page_title_info} {image_name_info} Include relevant keywords extracted from the page title and file name when available. Describe the image concisely yet comprehensively in {language}, using exactly {max_characters} characters or getting as close as possible to this limit. The description should be natural, informative, and optimized for search engines. Provide only the alt text without quotation marks, containing apostrophes, or other textual decorations.');
-
                     }
-
                 });
-
             });
-
         </script>
-
         <?php
-
     }
+    
+    /**
+      * Render WooCommerce prompt section
+      */
+     public function render_woocommerce_prompt_section() {
+         ?>
+         <p>
+             <?php _e('Configure a specific prompt for WooCommerce product images. When enabled, this prompt will be used for all images attached to WooCommerce products.', IMGSEO_TEXT_DOMAIN); ?>
+         </p>
+         <p>
+             <?php _e('You can use the following dynamic variables in your prompt:', IMGSEO_TEXT_DOMAIN); ?>
+         </p>
+         <ul class="imgseo-dynamic-variables">
+             <li><code>{language}</code> - <?php _e('Will be replaced with the selected language', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{max_characters}</code> - <?php _e('Will be replaced with the maximum characters setting', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{product_name}</code> - <?php _e('Will be replaced with the product name', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{product_brand}</code> - <?php _e('Will be replaced with the product brand', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{product_short_description}</code> - <?php _e('Will be replaced with the product short description', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{product_categories}</code> - <?php _e('Will be replaced with the product categories', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{product_price}</code> - <?php _e('Will be replaced with the product price', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{on_sale}</code> - <?php _e('Will be replaced with sale status', IMGSEO_TEXT_DOMAIN); ?></li>
+             <li><code>{product_attributes}</code> - <?php _e('Will be replaced with the product attributes', IMGSEO_TEXT_DOMAIN); ?></li>
+         </ul>
+         <?php
+     }
+    
+    /**
+     * Render enable WooCommerce prompt field
+     */
+    public function render_enable_woocommerce_prompt_field() {
+        $enable_woocommerce_prompt = get_option('imgseo_enable_woocommerce_prompt', 0);
+        ?>
+        <label>
+            <input type="checkbox" name="imgseo_enable_woocommerce_prompt" value="1" <?php checked(1, $enable_woocommerce_prompt); ?> />
+            <?php _e('Use a specific prompt for WooCommerce product images', IMGSEO_TEXT_DOMAIN); ?>
+        </label>
+        <p class="description">
+            <?php _e('When enabled, images attached to WooCommerce products will use the product-specific prompt below.', IMGSEO_TEXT_DOMAIN); ?>
+        </p>
+        <?php
+    }
+    
+    /**
+      * Render WooCommerce prompt field
+      */
+     public function render_woocommerce_prompt_field() {
+         $default_prompt = 'Generate alt text for this product image: {product_name} by {product_brand}\n\nContext: {product_short_description} - {product_categories} - {product_price} {on_sale} - {product_attributes}\n\nDescribe the visual elements shown (colors, style, angle, details) while naturally incorporating the product name. Keep it descriptive, SEO-friendly, under {max_characters} characters in {language}. Focus on what customers would want to know about this product image.';
+         $woocommerce_prompt = get_option('imgseo_woocommerce_prompt', $default_prompt);
+         ?>
+         <textarea name="imgseo_woocommerce_prompt" id="imgseo_woocommerce_prompt" rows="6" cols="80" class="large-text code"><?php echo esc_textarea($woocommerce_prompt); ?></textarea>
+
+         <p class="description">
+             <?php _e('Customize the prompt sent to the AI to generate alt text for WooCommerce product images. Use the dynamic variables listed above to make the prompt more effective.', IMGSEO_TEXT_DOMAIN); ?>
+         </p>
+
+         <button type="button" id="reset_woocommerce_prompt" class="button button-secondary" style="margin-top: 10px;">
+             <span class="dashicons dashicons-image-rotate" style="margin-top: 3px;"></span>
+             <?php _e('Reset Default Product Prompt', IMGSEO_TEXT_DOMAIN); ?>
+         </button>
+
+         <script>
+             jQuery(document).ready(function($) {
+                 $('#reset_woocommerce_prompt').on('click', function() {
+                     if (confirm('<?php _e('Are you sure you want to reset to the default WooCommerce product prompt? This operation will overwrite the current prompt.', IMGSEO_TEXT_DOMAIN); ?>')) {
+                         $('#imgseo_woocommerce_prompt').val('Generate alt text for this product image: {product_name} by {product_brand}\\n\\nContext: {product_short_description} - {product_categories} - {product_price} {on_sale} - {product_attributes}\\n\\nDescribe the visual elements shown (colors, style, angle, details) while naturally incorporating the product name. Keep it descriptive, SEO-friendly, under {max_characters} characters in {language}. Focus on what customers would want to know about this product image.');
+                     }
+                 });
+             });
+         </script>
+         <?php
+     }
 
 
 
@@ -1549,6 +1626,9 @@ private function __construct() {
 
         <input type="checkbox" name="imgseo_auto_generate" id="imgseo_auto_generate" value="1" <?php checked($auto_generate, 1); ?> />
 
+       
+
+
         <label for="imgseo_auto_generate"><?php _e('Automatically generate alt text when uploading images', IMGSEO_TEXT_DOMAIN); ?></label>
 
         <p class="description"><?php _e('When enabled, alt text will be automatically generated for each newly uploaded image.', IMGSEO_TEXT_DOMAIN); ?></p>
@@ -1559,6 +1639,19 @@ private function __construct() {
 
 
 
+    /**
+     * Rendering del campo forza utilizzo base64
+     */
+    public function render_always_use_base64_field() {
+        $always_use_base64 = get_option('imgseo_always_use_base64', 0);
+        ?>
+        <input type="checkbox" name="imgseo_always_use_base64" id="imgseo_always_use_base64" value="1" <?php checked($always_use_base64, 1); ?> />
+        <label for="imgseo_always_use_base64"><?php _e('Force base64 image transfer', IMGSEO_TEXT_DOMAIN); ?></label>
+        <p class="description"><?php _e('When enabled, images will always be sent to the service in base64 format instead of as URLs. Useful for sites with anti-hotlinking protection or with Cloudflare active.', IMGSEO_TEXT_DOMAIN); ?></p>
+        <?php
+    }
+
+
        /**
 
      * Rendering del campo aggiungi badge nel footer
@@ -1566,6 +1659,9 @@ private function __construct() {
      */
 
 public function render_footer_badge_field() {
+
+    
+
 
     $footer_badge = get_option('imgseo_footer_badge', 0);
     $support_link = get_option('imgseo_support_link', 0);
@@ -1750,5 +1846,9 @@ public function render_footer_badge_field() {
         <?php
 
     }
+
+    /**
+     * Rendering del campo per abilitare i dati strutturati
+     */
 
 }
